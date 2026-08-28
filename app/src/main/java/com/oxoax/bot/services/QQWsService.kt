@@ -135,7 +135,7 @@ class QQWsService(
             if (accessToken.isNullOrEmpty()) {
                 throw Exception("获取 Token 失败: $responseBody")
             }
-            log("Token 获取成功, expires_in=${expires_in}s")
+            log("Token 获取成功, expires_in=${expiresIn}s")
         }
     }
 

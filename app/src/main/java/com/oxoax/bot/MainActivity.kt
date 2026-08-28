@@ -439,7 +439,7 @@ fun HomePage() {
 
                 // 自动发现的群聊
                 if (autoGroups.isNotEmpty()) {
-                    HorizontalDivider(color = subColor.copy(alpha = 0.2f))
+                    Divider(color = subColor.copy(alpha = 0.2f))
                     Box(
                         modifier = Modifier.fillMaxWidth().padding(8.dp),
                         contentAlignment = Alignment.Center
