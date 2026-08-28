@@ -278,7 +278,7 @@ class QQWsService(
             put("op", 2)
             put("d", JSONObject().apply {
                 put("token", "QQBot $accessToken")
-                put("intent", INTENT_GROUP_AT_MESSAGE or INTENT_C2C_MESSAGE)
+                put("intents", INTENT_GROUP_AT_MESSAGE or INTENT_C2C_MESSAGE)
                 put("shard", JSONArray().apply {
                     put(0)
                     put(1)
