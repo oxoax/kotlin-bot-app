@@ -4,7 +4,9 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -13,173 +15,180 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.oxoax.bot.models.ChatMessage
 import com.oxoax.bot.models.Group
 import com.oxoax.bot.services.*
-import com.oxoax.bot.widgets.MessageContentBuilder
+import com.oxoax.bot.widgets.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 class MainActivity : ComponentActivity() {
-    companion object {
-        private const val TAG = "MainActivity"
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d(TAG, "onCreate")
-
         LocalStore.init(this)
         MessageStore.init(this)
-
-        setContent {
-            val isDark = isSystemInDarkTheme()
-            MaterialTheme(
-                colorScheme = if (isDark) darkColorScheme() else lightColorScheme()
-            ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = if (isDark) Color(0xFF0A0A0F) else Color(0xFFF2F2F7)
-                ) {
-                    App()
-                }
-            }
-        }
+        setContent { App() }
     }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        GlobalWs.dispose()
-    }
+    override fun onDestroy() { super.onDestroy(); GlobalWs.dispose() }
 }
 
 @Composable
 fun App() {
     var isConfigured by remember { mutableStateOf(LocalStore.isConfigured) }
-    Log.d("App", "isConfigured=$isConfigured")
-
-    if (!isConfigured) {
-        SetupPage(onDone = {
-            Log.d("App", "Setup done, switching to HomePage")
-            isConfigured = true
-        })
-    } else {
-        HomePage()
-    }
+    if (!isConfigured) LoginPage(onDone = { isConfigured = true })
+    else MainPage()
 }
 
-// ==================== 设置页 ====================
+// ==================== 登录页 ====================
 
 @Composable
-fun SetupPage(onDone: () -> Unit) {
+fun LoginPage(onDone: () -> Unit) {
     var name by remember { mutableStateOf("") }
     var qq by remember { mutableStateOf("") }
     var botId by remember { mutableStateOf("") }
     var botSecret by remember { mutableStateOf("") }
     var saving by remember { mutableStateOf(false) }
-    var errorMsg by remember { mutableStateOf<String?>(null) }
-    val isDark = isSystemInDarkTheme()
     val scope = rememberCoroutineScope()
 
-    val txtColor = if (isDark) Color.White.copy(alpha = 0.9f) else Color.Black.copy(alpha = 0.9f)
-    val subColor = if (isDark) Color.White.copy(alpha = 0.4f) else Color.Black.copy(alpha = 0.4f)
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            Icons.Default.Person,
+    Box(modifier = Modifier.fillMaxSize()) {
+        // 背景图
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data("https://www.loliapi.com/acg/pe/")
+                .crossfade(true)
+                .build(),
             contentDescription = null,
-            modifier = Modifier.size(56.dp),
-            tint = txtColor
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
         )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("机器人配置", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = txtColor)
-        Spacer(modifier = Modifier.height(28.dp))
 
-        OutlinedTextField(
-            value = name, onValueChange = { name = it },
-            label = { Text("机器人名称") },
-            placeholder = { Text("可选", color = subColor) },
-            modifier = Modifier.fillMaxWidth(), singleLine = true
+        // 毛玻璃遮罩
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.3f))
         )
-        Spacer(modifier = Modifier.height(14.dp))
 
-        OutlinedTextField(
-            value = qq, onValueChange = { qq = it },
-            label = { Text("机器人QQ号") },
-            placeholder = { Text("可选", color = subColor) },
-            modifier = Modifier.fillMaxWidth(), singleLine = true
-        )
-        Spacer(modifier = Modifier.height(14.dp))
+        // 内容
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 32.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // 标题
+            LiquidGlassBox(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp),
+                cornerRadius = 24.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        "XBOT",
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Text(
+                        "液态玻璃",
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.7f)
+                    )
+                }
+            }
 
-        OutlinedTextField(
-            value = botId, onValueChange = { botId = it },
-            label = { Text("机器人ID *") },
-            modifier = Modifier.fillMaxWidth(), singleLine = true
-        )
-        Spacer(modifier = Modifier.height(14.dp))
+            // 输入框容器
+            LiquidGlassBox(
+                modifier = Modifier.fillMaxWidth(),
+                cornerRadius = 20.dp
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    GlassInput(name, { name = it }, "机器人名称", "可选")
+                    Spacer(modifier = Modifier.height(12.dp))
+                    GlassInput(qq, { qq = it }, "机器人QQ号", "可选")
+                    Spacer(modifier = Modifier.height(12.dp))
+                    GlassInput(botId, { botId = it }, "机器人ID", "必填")
+                    Spacer(modifier = Modifier.height(12.dp))
+                    GlassInput(botSecret, { botSecret = it }, "机器人密钥", "必填")
+                    Spacer(modifier = Modifier.height(20.dp))
 
-        OutlinedTextField(
-            value = botSecret, onValueChange = { botSecret = it },
-            label = { Text("机器人密钥 *") },
-            modifier = Modifier.fillMaxWidth(), singleLine = true
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-
-        if (errorMsg != null) {
-            Text(errorMsg!!, color = Color.Red, fontSize = 13.sp)
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
-        Button(
-            onClick = {
-                if (botId.isBlank() || botSecret.isBlank()) return@Button
-                saving = true
-                errorMsg = null
-                scope.launch {
-                    try {
-                        val avatar = if (qq.isNotEmpty()) "http://q.qlogo.cn/headimg_dl?dst_uin=$qq&spec=640&img_type=jpg" else ""
-                        LocalStore.saveBot(botId.trim(), botSecret.trim(), qq = qq.trim(), name = name.trim(), avatar = avatar)
-                        Log.d("SetupPage", "保存成功，初始化 WebSocket")
-                        GlobalWs.init()
-                        onDone()
-                    } catch (e: Exception) {
-                        Log.e("SetupPage", "保存失败", e)
-                        errorMsg = "保存失败: ${e.message}"
-                    } finally {
-                        saving = false
+                    // 保存按钮
+                    LiquidGlassCapsule(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .clickable(enabled = botId.isNotBlank() && botSecret.isNotBlank() && !saving) {
+                                saving = true
+                                scope.launch {
+                                    try {
+                                        val avatar = if (qq.isNotEmpty()) "http://q.qlogo.cn/headimg_dl?dst_uin=$qq&spec=640&img_type=jpg" else ""
+                                        LocalStore.saveBot(botId.trim(), botSecret.trim(), qq = qq.trim(), name = name.trim(), avatar = avatar)
+                                        GlobalWs.init()
+                                        onDone()
+                                    } catch (_: Exception) {} finally { saving = false }
+                                }
+                            }
+                    ) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            if (saving) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
+                            else Text("保存并开始", fontWeight = FontWeight.SemiBold, color = Color.White, fontSize = 15.sp)
+                        }
                     }
                 }
-            },
-            enabled = botId.isNotBlank() && botSecret.isNotBlank() && !saving,
-            modifier = Modifier.fillMaxWidth().height(48.dp),
-            shape = RoundedCornerShape(14.dp)
-        ) {
-            if (saving) {
-                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
-            } else {
-                Text("保存并开始", fontWeight = FontWeight.SemiBold)
             }
+        }
+    }
+}
+
+@Composable
+fun GlassInput(value: String, onValueChange: (String) -> Unit, label: String, placeholder: String) {
+    LiquidGlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        cornerRadius = 12.dp
+    ) {
+        Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+            if (value.isEmpty()) {
+                Text(label, color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
+            }
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
+                singleLine = true,
+                cursorBrush = SolidColor(Color.White),
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
@@ -187,14 +196,8 @@ fun SetupPage(onDone: () -> Unit) {
 // ==================== 首页 ====================
 
 @Composable
-fun HomePage() {
-    val isDark = isSystemInDarkTheme()
+fun MainPage() {
     val scope = rememberCoroutineScope()
-
-    val txtColor = if (isDark) Color.White.copy(alpha = 0.9f) else Color.Black.copy(alpha = 0.9f)
-    val subColor = if (isDark) Color.White.copy(alpha = 0.4f) else Color.Black.copy(alpha = 0.4f)
-    val bgColor = if (isDark) Color.White.copy(alpha = 0.06f) else Color.Black.copy(alpha = 0.04f)
-
     var isConnected by remember { mutableStateOf(GlobalWs.isConnected) }
     var groups by remember { mutableStateOf(listOf<Group>()) }
     var selectedGroup by remember { mutableStateOf<Group?>(null) }
@@ -203,104 +206,58 @@ fun HomePage() {
     var logs by remember { mutableStateOf(listOf<String>()) }
     var inputText by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
+    var showConfig by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
-    // 加载本地群聊
     fun loadGroups() {
         groups = LocalStore.getGroups().map { Group.fromLocal(it) }
         autoGroups = LocalStore.getAutoGroups()
-        Log.d("HomePage", "加载群聊: ${groups.size} 个, 自动发现: ${autoGroups.size} 个")
     }
-
-    // 加载消息
     fun loadMessages(groupId: String) {
         scope.launch {
             val msgs = withContext(Dispatchers.IO) { MessageStore.loadMessages(groupId) }
             messages = msgs
-            // 滚动到底部
-            if (msgs.isNotEmpty()) {
-                listState.animateScrollToItem(msgs.size - 1)
-            }
+            if (msgs.isNotEmpty()) listState.animateScrollToItem(msgs.size - 1)
         }
     }
-
-    // 自动加入群聊
     fun autoJoinGroup(groupOpenid: String) {
         if (groups.any { it.group == groupOpenid || it.official == groupOpenid }) return
         scope.launch {
             var name = groupOpenid
             try {
                 val info = withContext(Dispatchers.IO) { ApiService.fetchGroupInfo(groupOpenid) }
-                if (info != null) {
-                    val groupName = info["group_name"]?.toString()
-                    if (!groupName.isNullOrEmpty()) name = groupName
-                }
+                val n = info?.get("group_name")?.toString()
+                if (!n.isNullOrEmpty()) name = n
             } catch (_: Exception) {}
-            val botAvatar = LocalStore.botAvatar ?: ""
-            LocalStore.addGroup(name, groupOpenid, groupOpenid, avatar = botAvatar)
+            LocalStore.addGroup(name, groupOpenid, groupOpenid, avatar = LocalStore.botAvatar ?: "")
             LocalStore.addAutoGroup(name, groupOpenid)
             loadGroups()
-            Log.d("HomePage", "自动加入群聊: $name ($groupOpenid)")
         }
     }
-
-    // 发送消息
     fun sendMessage() {
         val text = inputText.trim()
         if (text.isEmpty() || selectedGroup == null) return
         val group = selectedGroup!!
         val targetId = if (group.official.isNotEmpty()) group.official else group.group
-
         sending = true
         scope.launch {
             try {
-                val body = mapOf(
-                    "msg_type" to 0,
-                    "content" to text
-                )
-                val resp = withContext(Dispatchers.IO) {
-                    ApiService.sendToGroup(targetId, body)
-                }
-                Log.d("HomePage", "发送成功: $resp")
-
-                // 保存自己发送的消息
-                val selfMsg = ChatMessage(
-                    time = System.currentTimeMillis().toString(),
-                    type = "SELF_SEND",
-                    content = text,
-                    isSelf = true,
-                    username = LocalStore.botName ?: "机器人",
-                    userId = LocalStore.botQQ ?: "",
-                    sentAt = System.currentTimeMillis()
-                )
+                withContext(Dispatchers.IO) { ApiService.sendToGroup(targetId, mapOf("msg_type" to 0, "content" to text)) }
+                val selfMsg = ChatMessage(time = System.currentTimeMillis().toString(), type = "SELF_SEND", content = text, isSelf = true, username = LocalStore.botName ?: "机器人", userId = LocalStore.botQQ ?: "", sentAt = System.currentTimeMillis())
                 MessageStore.appendMessage(group.group, selfMsg)
                 inputText = ""
                 loadMessages(group.group)
-            } catch (e: Exception) {
-                Log.e("HomePage", "发送失败", e)
-                logs = logs + "发送失败: ${e.message}"
-            } finally {
-                sending = false
-            }
+            } catch (e: Exception) { logs = logs + "发送失败: ${e.message}" } finally { sending = false }
         }
     }
 
-    // 初始化
     DisposableEffect(Unit) {
         loadGroups()
-
-        val connListener: (Boolean) -> Unit = { connected ->
-            isConnected = connected
-            logs = logs + if (connected) "✅ WebSocket 已连接" else "❌ WebSocket 断开"
-        }
+        val connListener: (Boolean) -> Unit = { c -> isConnected = c; logs = logs + if (c) "✅ 已连接" else "❌ 断开" }
         val eventListener: (JSONObject) -> Unit = { event ->
             val t = event.optString("t", "")
             val d = event.optJSONObject("d")
-
-            if (t == "READY") {
-                logs = logs + "✅ 就绪! session_id: ${d?.optString("session_id")}"
-            }
-
+            if (t == "READY") logs = logs + "✅ 就绪"
             if (d != null && (t == "GROUP_AT_MESSAGE_CREATE" || t == "GROUP_MESSAGE_CREATE" || t == "C2C_MESSAGE_CREATE")) {
                 val author = d.optJSONObject("author")
                 val groupOpenid = d.optString("group_openid", "")
@@ -309,58 +266,22 @@ fun HomePage() {
                 val userId = author?.optString("member_openid") ?: author?.optString("user_openid") ?: ""
                 val msgId = d.optString("id", "")
                 val timestamp = d.optString("timestamp", "")
-
-                Log.d("HomePage", "收到消息: [$nickname] $content (group=$groupOpenid)")
-
-                // 清理内容
-                var cleanContent = content
-                cleanContent = cleanContent.replace(Regex("<faceType=[^>]*>"), "")
-                cleanContent = cleanContent.replace("<@all>", "@全体成员")
-                cleanContent = cleanContent.replace(Regex("<@!\\d+>"), "")
-                cleanContent = cleanContent.replace("\$", "")
-
-                val msg = ChatMessage(
-                    time = timestamp,
-                    type = "text",
-                    username = nickname,
-                    userId = userId,
-                    content = cleanContent,
-                    messageId = msgId,
-                    role = author?.optString("member_role") ?: "member",
-                    isBot = author?.optBoolean("bot") ?: false,
-                    rawPayload = d.keys().asSequence().associateWith { d.get(it) }
-                )
-
-                // 自动加入未知群
+                var clean = content.replace(Regex("<faceType=[^>]*>"), "").replace("<@all>", "@全体成员").replace(Regex("<@!\\d+>"), "").replace("\$", "")
+                val msg = ChatMessage(time = timestamp, type = "text", username = nickname, userId = userId, content = clean, messageId = msgId, role = author?.optString("member_role") ?: "member", isBot = author?.optBoolean("bot") ?: false)
                 if (t != "C2C_MESSAGE_CREATE" && groupOpenid.isNotEmpty()) {
-                    val matchGroup = groups.find { it.group == groupOpenid || it.official == groupOpenid }
-                    if (matchGroup == null) {
-                        autoJoinGroup(groupOpenid)
-                    }
+                    if (groups.none { it.group == groupOpenid || it.official == groupOpenid }) autoJoinGroup(groupOpenid)
                 }
-
-                // 保存消息
                 val storeKey = if (t == "C2C_MESSAGE_CREATE") "c2c_$userId" else groupOpenid
                 MessageStore.appendMessage(storeKey, msg)
-
-                // 如果是当前选中的群，刷新消息
-                if (selectedGroup != null && (selectedGroup!!.group == groupOpenid || selectedGroup!!.official == groupOpenid)) {
-                    loadMessages(selectedGroup!!.group)
-                }
-
-                // 更新自动发现列表
+                if (selectedGroup != null && (selectedGroup!!.group == groupOpenid || selectedGroup!!.official == groupOpenid)) loadMessages(selectedGroup!!.group)
                 autoGroups = LocalStore.getAutoGroups()
             }
         }
-        val logListener: (String) -> Unit = { msg ->
-            logs = (logs + msg).takeLast(50)
-        }
-
+        val logListener: (String) -> Unit = { m -> logs = (logs + m).takeLast(50) }
         GlobalWs.addConnectionListener(connListener)
         GlobalWs.addEventListener(eventListener)
         GlobalWs.addLogListener(logListener)
         GlobalWs.ensureConnected()
-
         onDispose {
             GlobalWs.removeConnectionListener(connListener)
             GlobalWs.removeEventListener(eventListener)
@@ -368,226 +289,223 @@ fun HomePage() {
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // 顶部状态栏
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(if (isConnected) Color(0xFF4CAF50) else Color(0xFFF44336))
-                .padding(12.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = if (isConnected) "已连接" else "未连接",
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
+    // 背景
+    Box(modifier = Modifier.fillMaxSize()) {
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current).data("https://www.loliapi.com/acg/pe/").crossfade(true).build(),
+            contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop
+        )
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)))
 
-        Row(modifier = Modifier.weight(1f)) {
-            // 左侧：群聊列表
-            Column(
-                modifier = Modifier
-                    .width(130.dp)
-                    .fillMaxHeight()
-                    .background(bgColor)
+        Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+            // 顶部栏 - 液态玻璃
+            LiquidGlassBox(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                cornerRadius = 20.dp
             ) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(8.dp),
-                    contentAlignment = Alignment.Center
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("群聊 (${groups.size})", fontWeight = FontWeight.Bold, color = txtColor, fontSize = 14.sp)
-                }
-
-                LazyColumn(modifier = Modifier.weight(1f)) {
-                    items(groups) { group ->
-                        val isSelected = selectedGroup?.group == group.group
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    selectedGroup = group
-                                    loadMessages(group.group)
-                                }
-                                .background(
-                                    if (isSelected) Color(0xFF0000FF).copy(alpha = 0.15f) else Color.Transparent
-                                )
-                                .padding(12.dp)
-                        ) {
-                            Column {
-                                Text(
-                                    text = group.name,
-                                    fontSize = 13.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) Color(0xFF0000FF) else txtColor,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                if (group.group != group.name) {
-                                    Text(
-                                        text = group.group,
-                                        fontSize = 10.sp,
-                                        color = subColor,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
+                    // 机器人头像
+                    val avatarUrl = LocalStore.botAvatar
+                    if (!avatarUrl.isNullOrEmpty()) {
+                        AsyncImage(
+                            model = avatarUrl,
+                            contentDescription = null,
+                            modifier = Modifier.size(40.dp).clip(CircleShape).border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        LiquidGlassCircle(modifier = Modifier.size(40.dp)) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
                             }
                         }
                     }
-                }
-
-                // 自动发现的群聊
-                if (autoGroups.isNotEmpty()) {
-                    Divider(color = subColor.copy(alpha = 0.2f))
-                    Box(
-                        modifier = Modifier.fillMaxWidth().padding(8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("自动发现 (${autoGroups.size})", fontSize = 11.sp, color = subColor)
-                    }
-                    LazyColumn(modifier = Modifier.heightIn(max = 150.dp)) {
-                        items(autoGroups) { ag ->
-                            val name = ag["name"] ?: ""
-                            val openid = ag["group_openid"] ?: ""
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        LocalStore.addGroup(name, openid, openid)
-                                        loadGroups()
-                                    }
-                                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                            ) {
-                                Text(text = name, fontSize = 12.sp, color = subColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 右侧：消息区域
-            Column(
-                modifier = Modifier.weight(1f).fillMaxHeight()
-            ) {
-                if (selectedGroup == null) {
-                    // 未选择群聊 - 显示日志
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("选择一个群聊", color = subColor, fontSize = 16.sp)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("或等待消息自动加入", color = subColor.copy(alpha = 0.5f), fontSize = 12.sp)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            // 显示日志
-                            LazyColumn(modifier = Modifier.heightIn(max = 300.dp).padding(horizontal = 16.dp)) {
-                                items(logs.takeLast(20)) { log ->
-                                    Text(log, fontSize = 10.sp, color = subColor, modifier = Modifier.padding(vertical = 1.dp))
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    // 群聊标题
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(bgColor)
-                            .padding(12.dp)
-                    ) {
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(LocalStore.botName ?: "XBOT", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
                         Text(
-                            text = selectedGroup!!.name,
-                            fontWeight = FontWeight.Bold,
-                            color = txtColor,
-                            fontSize = 16.sp
+                            "ID: ${LocalStore.botId ?: ""}",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.6f),
+                            modifier = Modifier.clickable { showConfig = true }
                         )
                     }
+                    // 连接状态
+                    Box(
+                        modifier = Modifier.size(10.dp).clip(CircleShape).background(if (isConnected) Color(0xFF4CAF50) else Color(0xFFF44336))
+                    )
+                }
+            }
 
-                    // 消息列表
-                    LazyColumn(
-                        modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-                        state = listState
-                    ) {
-                        items(messages) { msg ->
-                            MessageItem(msg = msg, isDark = isDark)
+            // 主内容区
+            Row(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                // 左侧群聊列表
+                LiquidGlassBox(
+                    modifier = Modifier.width(130.dp).fillMaxHeight(),
+                    cornerRadius = 16.dp
+                ) {
+                    Column {
+                        Box(modifier = Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
+                            Text("群聊", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp)
+                        }
+                        LazyColumn(modifier = Modifier.weight(1f)) {
+                            items(groups) { group ->
+                                val isSelected = selectedGroup?.group == group.group
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { selectedGroup = group; loadMessages(group.group) }
+                                        .background(if (isSelected) Color.White.copy(alpha = 0.1f) else Color.Transparent)
+                                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                                ) {
+                                    Text(group.name, fontSize = 13.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    if (group.group != group.name) Text(group.group, fontSize = 10.sp, color = Color.White.copy(alpha = 0.4f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
+                        }
+                        if (autoGroups.isNotEmpty()) {
+                            Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(Color.White.copy(alpha = 0.15f)))
+                            Box(modifier = Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
+                                Text("自动发现", fontSize = 11.sp, color = Color.White.copy(alpha = 0.5f))
+                            }
+                            LazyColumn(modifier = Modifier.heightIn(max = 120.dp)) {
+                                items(autoGroups) { ag ->
+                                    val n = ag["name"] ?: ""
+                                    val oid = ag["group_openid"] ?: ""
+                                    Text(n, fontSize = 12.sp, color = Color.White.copy(alpha = 0.5f), modifier = Modifier.fillMaxWidth().clickable { LocalStore.addGroup(n, oid, oid); loadGroups() }.padding(horizontal = 12.dp, vertical = 8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
                         }
                     }
+                }
 
-                    // 输入框
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(bgColor)
-                            .padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            value = inputText,
-                            onValueChange = { inputText = it },
-                            modifier = Modifier.weight(1f),
-                            placeholder = { Text("输入消息...", color = subColor) },
-                            singleLine = true
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        IconButton(
-                            onClick = { sendMessage() },
-                            enabled = inputText.isNotBlank() && !sending
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Send,
-                                contentDescription = "发送",
-                                tint = if (inputText.isNotBlank()) Color(0xFF0000FF) else subColor
-                            )
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // 右侧消息区
+                LiquidGlassBox(
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    cornerRadius = 16.dp
+                ) {
+                    if (selectedGroup == null) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("选择一个群聊", color = Color.White.copy(alpha = 0.6f), fontSize = 16.sp)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                LazyColumn(modifier = Modifier.heightIn(max = 200.dp).padding(horizontal = 16.dp)) {
+                                    items(logs.takeLast(15)) { l -> Text(l, fontSize = 10.sp, color = Color.White.copy(alpha = 0.4f), modifier = Modifier.padding(vertical = 1.dp)) }
+                                }
+                            }
+                        }
+                    } else {
+                        Column {
+                            Box(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+                                Text(selectedGroup!!.name, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
+                            }
+                            LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 8.dp), state = listState) {
+                                items(messages) { msg ->
+                                    val subColor = Color.White.copy(alpha = 0.4f)
+                                    val bg = if (msg.isSelf) Color(0xFF0000FF).copy(alpha = 0.15f) else Color.White.copy(alpha = 0.06f)
+                                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text(msg.username ?: "", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = if (msg.isSelf) Color(0xFF6B9FFF) else subColor)
+                                            Text(msg.time, fontSize = 9.sp, color = subColor.copy(alpha = 0.4f))
+                                        }
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(bg).padding(8.dp)) {
+                                            MessageContentBuilder.Build(text = msg.content ?: "", isDark = true)
+                                        }
+                                    }
+                                }
+                            }
+                            // 输入框
+                            LiquidGlassBox(modifier = Modifier.fillMaxWidth().padding(8.dp), cornerRadius = 16.dp) {
+                                Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = 0.06f)).padding(horizontal = 16.dp, vertical = 12.dp)) {
+                                        if (inputText.isEmpty()) Text("输入消息...", color = Color.White.copy(alpha = 0.4f), fontSize = 14.sp)
+                                        BasicTextField(value = inputText, onValueChange = { inputText = it }, textStyle = TextStyle(color = Color.White, fontSize = 14.sp), singleLine = true, cursorBrush = SolidColor(Color.White), modifier = Modifier.fillMaxWidth())
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    LiquidGlassCircle(modifier = Modifier.size(40.dp).clickable(enabled = inputText.isNotBlank() && !sending) { sendMessage() }) {
+                                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, tint = if (inputText.isNotBlank()) Color.White else Color.White.copy(alpha = 0.3f), modifier = Modifier.size(20.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 底部栏 - 液态玻璃
+            LiquidGlassBox(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
+                cornerRadius = 20.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    // 群列表图标
+                    LiquidGlassCapsule(modifier = Modifier.weight(1f).height(36.dp)) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("群", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
+                        }
+                    }
+                    // 分割线
+                    Box(modifier = Modifier.width(0.5.dp).height(24.dp).background(Color.White.copy(alpha = 0.2f)))
+                    // 私列表图标
+                    LiquidGlassCapsule(modifier = Modifier.weight(1f).height(36.dp)) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("私", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    // 搜索
+                    LiquidGlassCircle(modifier = Modifier.size(36.dp)) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Search, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    // 设置
+                    LiquidGlassCircle(modifier = Modifier.size(36.dp).clickable { showConfig = true }) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Settings, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                         }
                     }
                 }
             }
         }
-    }
-}
 
-@Composable
-fun MessageItem(msg: ChatMessage, isDark: Boolean) {
-    val subColor = if (isDark) Color.White.copy(alpha = 0.4f) else Color.Black.copy(alpha = 0.4f)
-    val bgColor = if (msg.isSelf) {
-        Color(0xFF0000FF).copy(alpha = 0.1f)
-    } else {
-        if (isDark) Color.White.copy(alpha = 0.06f) else Color.Black.copy(alpha = 0.04f)
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = msg.username ?: "未知",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = if (msg.isSelf) Color(0xFF0000FF) else subColor
-            )
-            Text(
-                text = msg.time,
-                fontSize = 10.sp,
-                color = subColor.copy(alpha = 0.5f)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(bgColor, RoundedCornerShape(8.dp))
-                .padding(8.dp)
-        ) {
-            MessageContentBuilder.Build(
-                text = msg.content ?: "",
-                isDark = isDark
-            )
+        // 配置弹窗
+        if (showConfig) {
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).clickable { showConfig = false }) {
+                LiquidGlassBox(
+                    modifier = Modifier.align(Alignment.Center).padding(32.dp).fillMaxWidth(),
+                    cornerRadius = 20.dp
+                ) {
+                    Column(modifier = Modifier.padding(24.dp)) {
+                        Text("机器人配置", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 18.sp)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("ID: ${LocalStore.botId ?: ""}", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+                        Text("QQ: ${LocalStore.botQQ ?: ""}", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+                        Text("名称: ${LocalStore.botName ?: ""}", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        LiquidGlassCapsule(
+                            modifier = Modifier.fillMaxWidth().height(44.dp).clickable { showConfig = false }
+                        ) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("关闭", color = Color.White, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
