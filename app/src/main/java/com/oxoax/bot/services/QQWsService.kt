@@ -2,6 +2,8 @@ package com.oxoax.bot.services
 
 import kotlinx.coroutines.*
 import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import okio.ByteString
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
@@ -45,13 +47,10 @@ class QQWsService(
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    // 事件回调
     var onEvent: ((JSONObject) -> Unit)? = null
     var onConnectionChange: ((Boolean) -> Unit)? = null
 
     val isConnected: Boolean get() = connected
-
-    // ==================== 公开方法 ====================
 
     fun connect() {
         if (connected) return
@@ -159,8 +158,6 @@ class QQWsService(
         scope.cancel()
     }
 
-    // ==================== Token 管理 ====================
-
     private suspend fun ensureToken() {
         val now = System.currentTimeMillis()
         if (accessToken == null || now >= tokenExpiry - 60000) {
@@ -188,8 +185,6 @@ class QQWsService(
         }
     }
 
-    // ==================== 网关 ====================
-
     private suspend fun fetchGateway(): String {
         ensureToken()
         val request = Request.Builder()
@@ -204,8 +199,6 @@ class QQWsService(
             d.getString("url")
         }
     }
-
-    // ==================== WebSocket ====================
 
     private suspend fun connectWs(gatewayUrl: String) {
         val request = Request.Builder().url(gatewayUrl).build()
@@ -248,13 +241,13 @@ class QQWsService(
             val op = payload.getInt("op")
 
             when (op) {
-                10 -> { // Hello
+                10 -> {
                     heartbeatIntervalMs = payload.getJSONObject("d").getInt("heartbeat_interval")
                     println("[QQWs] Hello 收到，心跳间隔: ${heartbeatIntervalMs}ms")
                     startHeartbeat()
                     sendIdentify()
                 }
-                0 -> { // Dispatch
+                0 -> {
                     val t = payload.optString("t", "")
                     val seq = if (payload.has("s") && !payload.isNull("s")) payload.optInt("s") else null
                     val d = payload.optJSONObject("d")
@@ -268,14 +261,14 @@ class QQWsService(
                     }
                     onEvent?.invoke(payload)
                 }
-                9 -> { // Invalid Session
+                9 -> {
                     println("[QQWs] Session 无效，重新 Identify")
                     identifySent = false
                     lastSeq = null
                     sessionId = null
                     sendIdentify()
                 }
-                11 -> { /* Heartbeat ACK */ }
+                11 -> { }
                 else -> println("[QQWs] 未处理 OP $op")
             }
         } catch (e: Exception) {
@@ -299,8 +292,6 @@ class QQWsService(
         if (!manualDisconnect) scheduleReconnect()
     }
 
-    // ==================== 认证 ====================
-
     private fun sendIdentify() {
         if (identifySent) return
         identifySent = true
@@ -321,8 +312,6 @@ class QQWsService(
         send(payload)
     }
 
-    // ==================== 心跳 ====================
-
     private fun startHeartbeat() {
         heartbeatJob?.cancel()
         heartbeatJob = scope.launch {
@@ -340,8 +329,6 @@ class QQWsService(
         }
         send(payload)
     }
-
-    // ==================== 重连 ====================
 
     private fun scheduleReconnect() {
         if (manualDisconnect || reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
@@ -367,8 +354,6 @@ class QQWsService(
         }
     }
 
-    // ==================== 工具 ====================
-
     private fun send(data: JSONObject) {
         webSocket?.send(data.toString())
     }
@@ -382,11 +367,9 @@ class QQWsService(
         webSocket = null
     }
 
-    // ==================== 事件解析 ====================
-
     data class ParsedEvent(
-        val type: String,      // group or c2c
-        val event: String,     // event name
+        val type: String,
+        val event: String,
         val data: JSONObject,
         val groupOpenid: String?,
         val authorId: String?,

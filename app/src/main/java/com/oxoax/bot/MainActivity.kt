@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,7 +25,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 初始化服务
         LocalStore.init(this)
         MessageStore.init(this)
         GlobalWs.init()
@@ -115,7 +115,6 @@ fun MainScreen() {
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // 状态栏
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -129,7 +128,6 @@ fun MainScreen() {
             )
         }
 
-        // 消息列表
         LazyColumn(
             modifier = Modifier
                 .weight(1f)
@@ -144,45 +142,37 @@ fun MainScreen() {
             }
         }
 
-        // 测试区域：展示各种文字效果
         Column(modifier = Modifier.padding(16.dp)) {
             Text("效果演示:", style = MaterialTheme.typography.titleSmall)
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 普通文字
             MessageContentBuilder.Build(text = "这是普通文字", isDark = isDark)
 
-            // 彩色文字
             MessageContentBuilder.Build(
                 text = "\\textcolor{#FF6B6B}{红色文字} 和 \\textcolor{#4ECDC4}{青色文字}",
                 isDark = isDark
             )
 
-            // 渐变文字
             MessageContentBuilder.Build(
                 text = "\\gradient{#FF6B6B}{#4ECDC4}{渐变文字效果}",
                 isDark = isDark
             )
 
-            // 大字
             MessageContentBuilder.Build(
                 text = "\\Huge 这是大字效果",
                 isDark = isDark
             )
 
-            // 背景色块
             MessageContentBuilder.Build(
                 text = "\\colorbox{#2D3436}{\\textcolor{#FFFFFF}{深色背景白色文字}}",
                 isDark = isDark
             )
 
-            // big 效果
             MessageContentBuilder.Build(
                 text = "\\big{#6C5CE7}{#FFFFFF}{2}{重要提示}",
                 isDark = isDark
             )
 
-            // 代码块
             MessageContentBuilder.Build(
                 text = "```kotlin\nfun main() {\n    println(\"Hello, World!\")\n}\n```",
                 isDark = isDark
