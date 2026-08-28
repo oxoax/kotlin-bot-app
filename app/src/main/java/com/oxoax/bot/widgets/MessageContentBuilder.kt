@@ -12,21 +12,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.*
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/**
- * 消息内容渲染器 — 处理彩色文字、代码块、LaTeX 语法、图片等
- * 从 Flutter MessageContentBuilder 迁移
- */
 object MessageContentBuilder {
 
     private val namedColors = mapOf(
@@ -47,148 +39,73 @@ object MessageContentBuilder {
         var h = hex.removePrefix("#").lowercase()
         namedColors[h]?.let { return Color(it) }
         if (h.length == 6) h = "FF$h"
-        return try {
-            Color(h.toLong(16))
-        } catch (_: Exception) {
-            Color.White
-        }
+        return try { Color(h.toLong(16)) } catch (_: Exception) { Color.White }
     }
 
     private fun braceAt(s: String, start: Int): String? {
         if (start >= s.length || s[start] != '{') return null
-        var depth = 0
-        var i = start
+        var depth = 0; var i = start
         while (i < s.length) {
-            when (s[i]) {
-                '{' -> depth++
-                '}' -> {
-                    depth--
-                    if (depth == 0) return s.substring(start + 1, i)
-                }
-            }
+            when (s[i]) { '{' -> depth++; '}' -> { depth--; if (depth == 0) return s.substring(start + 1, i) } }
             i++
         }
         return null
     }
 
     @Composable
-    fun Build(
-        text: String,
-        isDark: Boolean,
-        modifier: Modifier = Modifier,
-        textAlign: TextAlign = TextAlign.Start
-    ) {
+    fun Build(text: String, isDark: Boolean, modifier: Modifier = Modifier, textAlign: TextAlign = TextAlign.Start) {
         val txtColor = if (isDark) Color.White.copy(alpha = 0.9f) else Color.Black.copy(alpha = 0.9f)
         val subColor = if (isDark) Color.White.copy(alpha = 0.4f) else Color.Black.copy(alpha = 0.4f)
         val bubbleColor = if (isDark) Color.White.copy(alpha = 0.06f) else Color.Black.copy(alpha = 0.04f)
 
-        // 分割代码块
         val codeParts = text.split(Regex("```(?:\\w*)\\n?"))
         val allComposables = mutableListOf<@Composable () -> Unit>()
 
         for ((i, part) in codeParts.withIndex()) {
             if (part.isBlank()) continue
             if (i % 2 == 1) {
-                // 代码块
                 allComposables.add {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .background(bubbleColor, RoundedCornerShape(8.dp))
-                            .padding(10.dp)
-                    ) {
-                        Text(
-                            text = part.trim(),
-                            style = TextStyle(
-                                fontSize = 13.sp,
-                                color = txtColor,
-                                fontFamily = FontFamily.Monospace,
-                                lineHeight = 19.5.sp
-                            )
-                        )
+                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).background(bubbleColor, RoundedCornerShape(8.dp)).padding(10.dp)) {
+                        Text(text = part.trim(), style = TextStyle(fontSize = 13.sp, color = txtColor, fontFamily = FontFamily.Monospace, lineHeight = 19.5.sp))
                     }
                 }
             } else {
-                allComposables.add {
-                    LatexLine(
-                        text = part,
-                        txtColor = txtColor,
-                        subColor = subColor,
-                        textAlign = textAlign
-                    )
-                }
+                allComposables.add { LatexLine(text = part, txtColor = txtColor, subColor = subColor, textAlign = textAlign) }
             }
         }
 
-        Column(modifier = modifier) {
-            allComposables.forEach { it() }
-        }
+        Column(modifier = modifier) { allComposables.forEach { it() } }
     }
 
     @Composable
-    private fun LatexLine(
-        text: String,
-        txtColor: Color,
-        subColor: Color,
-        textAlign: TextAlign
-    ) {
+    private fun LatexLine(text: String, txtColor: Color, subColor: Color, textAlign: TextAlign) {
         val spans = mutableListOf<AnnotatedString.Builder.() -> Unit>()
         val widgets = mutableListOf<@Composable () -> Unit>()
         var i = 0
 
         while (i < text.length) {
-            // markdown 图片 ![alt](url)
+            // markdown 图片
             if (i + 1 < text.length && text.substring(i, i + 2) == "![") {
-                val closeBracket = text.indexOf(']', i + 2)
-                if (closeBracket >= 0 && closeBracket + 1 < text.length && text[closeBracket + 1] == '(') {
-                    val closeParen = text.indexOf(')', closeBracket + 2)
-                    if (closeParen > closeBracket + 2) {
-                        val url = text.substring(closeBracket + 2, closeParen)
-                        i = closeParen + 1
-                        // 先输出已有 spans
-                        if (spans.isNotEmpty()) {
-                            val builder = AnnotatedString.Builder()
-                            spans.forEach { it(builder) }
-                            widgets.add {
-                                Text(
-                                    text = builder.toAnnotatedString(),
-                                    style = TextStyle(fontSize = 14.sp, color = txtColor, lineHeight = 19.6.sp),
-                                    textAlign = textAlign
-                                )
-                            }
-                            spans.clear()
-                        }
-                        widgets.add {
-                            // 图片占位（实际项目中用 Coil 等加载）
-                            Box(
-                                modifier = Modifier
-                                    .padding(vertical = 4.dp)
-                                    .size(200.dp, 100.dp)
-                                    .background(subColor.copy(alpha = 0.1f), RoundedCornerShape(10.dp)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("📷 $url", color = subColor, fontSize = 10.sp)
-                            }
-                        }
+                val cb = text.indexOf(']', i + 2)
+                if (cb >= 0 && cb + 1 < text.length && text[cb + 1] == '(') {
+                    val cp = text.indexOf(')', cb + 2)
+                    if (cp > cb + 2) {
+                        val url = text.substring(cb + 2, cp); i = cp + 1
+                        flushSpans(spans, widgets, txtColor, textAlign)
+                        widgets.add { Box(modifier = Modifier.padding(vertical = 4.dp).size(200.dp, 100.dp).background(subColor.copy(alpha = 0.1f), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) { Text("📷 $url", color = subColor, fontSize = 10.sp) } }
                         continue
                     }
                 }
             }
 
-            // markdown 链接 [text](url)
+            // markdown 链接
             if (i < text.length && text[i] == '[' && (i == 0 || text[i - 1] != '!')) {
-                val closeBracket = text.indexOf(']', i + 1)
-                if (closeBracket >= 0 && closeBracket + 1 < text.length && text[closeBracket + 1] == '(') {
-                    val closeParen = text.indexOf(')', closeBracket + 2)
-                    if (closeParen > closeBracket + 2) {
-                        val linkText = text.substring(i + 1, closeBracket)
-                        i = closeParen + 1
-                        spans.add {
-                            withStyle(SpanStyle(color = Color(0xFF1565C0))) {
-                                append(linkText)
-                            }
-                        }
+                val cb = text.indexOf(']', i + 1)
+                if (cb >= 0 && cb + 1 < text.length && text[cb + 1] == '(') {
+                    val cp = text.indexOf(')', cb + 2)
+                    if (cp > cb + 2) {
+                        val linkText = text.substring(i + 1, cb); i = cp + 1
+                        spans.add { withStyle(SpanStyle(color = Color(0xFF1565C0))) { append(linkText) } }
                         continue
                     }
                 }
@@ -196,45 +113,21 @@ object MessageContentBuilder {
 
             // \gradient{#hex1}{#hex2}{text}
             if (i + 9 < text.length && text.substring(i, i + 9) == "\\gradient") {
-                val brace1 = text.indexOf('{', i + 9)
-                if (brace1 >= 0) {
-                    val hex1 = braceAt(text, brace1)
-                    if (hex1 != null) {
-                        val brace2 = text.indexOf('{', brace1 + hex1.length + 2)
-                        if (brace2 >= 0) {
-                            val hex2 = braceAt(text, brace2)
-                            if (hex2 != null) {
-                                val brace3 = text.indexOf('{', brace2 + hex2.length + 2)
-                                if (brace3 >= 0) {
-                                    val content = braceAt(text, brace3)
+                val b1 = text.indexOf('{', i + 9)
+                if (b1 >= 0) {
+                    val h1 = braceAt(text, b1)
+                    if (h1 != null) {
+                        val b2 = text.indexOf('{', b1 + h1.length + 2)
+                        if (b2 >= 0) {
+                            val h2 = braceAt(text, b2)
+                            if (h2 != null) {
+                                val b3 = text.indexOf('{', b2 + h2.length + 2)
+                                if (b3 >= 0) {
+                                    val content = braceAt(text, b3)
                                     if (content != null) {
-                                        i = brace3 + content.length + 2
-                                        // 先输出已有 spans
-                                        if (spans.isNotEmpty()) {
-                                            val builder = AnnotatedString.Builder()
-                                            spans.forEach { it(builder) }
-                                            widgets.add {
-                                                Text(
-                                                    text = builder.toAnnotatedString(),
-                                                    style = TextStyle(fontSize = 14.sp, color = txtColor, lineHeight = 19.6.sp),
-                                                    textAlign = textAlign
-                                                )
-                                            }
-                                            spans.clear()
-                                        }
-                                        widgets.add {
-                                            Text(
-                                                text = content,
-                                                style = TextStyle(
-                                                    fontSize = 14.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    brush = Brush.horizontalGradient(
-                                                        colors = listOf(parseHex(hex1), parseHex(hex2))
-                                                    ),
-                                                    lineHeight = 19.6.sp
-                                                )
-                                            )
-                                        }
+                                        i = b3 + content.length + 2
+                                        flushSpans(spans, widgets, txtColor, textAlign)
+                                        widgets.add { Text(text = content, style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, brush = Brush.horizontalGradient(listOf(parseHex(h1), parseHex(h2))), lineHeight = 19.6.sp)) }
                                         continue
                                     }
                                 }
@@ -244,75 +137,27 @@ object MessageContentBuilder {
                 }
             }
 
-            // \big{#bg}{#fg}{text} or \big{#bg}{#fg}{scale}{text}
+            // \big{#bg}{#fg}{text}
             if (i + 4 < text.length && text.substring(i, i + 4) == "\\big") {
-                val braceStart = text.indexOf('{', i + 4)
-                if (braceStart >= 0) {
-                    val innerContent = braceAt(text, braceStart)
-                    if (innerContent != null) {
-                        val parts = mutableListOf<String>()
-                        var pos = 0
-                        while (pos < innerContent.length) {
-                            val nextBrace = innerContent.indexOf('{', pos)
-                            if (nextBrace < 0) {
-                                parts.add(innerContent.substring(pos))
-                                break
-                            }
-                            if (nextBrace > pos) parts.add(innerContent.substring(pos, nextBrace))
-                            val inner = braceAt(innerContent, nextBrace)
-                            if (inner != null) {
-                                parts.add(inner)
-                                pos = nextBrace + inner.length + 2
-                            } else {
-                                parts.add(innerContent.substring(nextBrace))
-                                break
-                            }
+                val bs = text.indexOf('{', i + 4)
+                if (bs >= 0) {
+                    val inner = braceAt(text, bs)
+                    if (inner != null) {
+                        val parts = mutableListOf<String>(); var pos = 0
+                        while (pos < inner.length) {
+                            val nb = inner.indexOf('{', pos)
+                            if (nb < 0) { parts.add(inner.substring(pos)); break }
+                            if (nb > pos) parts.add(inner.substring(pos, nb))
+                            val inn = braceAt(inner, nb)
+                            if (inn != null) { parts.add(inn); pos = nb + inn.length + 2 } else { parts.add(inner.substring(nb)); break }
                         }
-
                         if (parts.size >= 3) {
-                            val bg = parts[0].trim()
-                            val fg = parts[1].trim()
-                            val display: String
-                            val scale: Double
-                            if (parts.size >= 4) {
-                                scale = parts[2].trim().toDoubleOrNull() ?: 2.0
-                                display = parts[3].trim()
-                            } else {
-                                scale = 2.0
-                                display = parts[2].trim()
-                            }
-                            i = braceStart + innerContent.length + 2
-
-                            // 先输出已有 spans
-                            if (spans.isNotEmpty()) {
-                                val builder = AnnotatedString.Builder()
-                                spans.forEach { it(builder) }
-                                widgets.add {
-                                    Text(
-                                        text = builder.toAnnotatedString(),
-                                        style = TextStyle(fontSize = 14.sp, color = txtColor, lineHeight = 19.6.sp),
-                                        textAlign = textAlign
-                                    )
-                                }
-                                spans.clear()
-                            }
-                            widgets.add {
-                                Box(
-                                    modifier = Modifier
-                                        .padding(vertical = 4.dp)
-                                        .background(parseHex(bg), RoundedCornerShape(10.dp))
-                                        .padding(horizontal = 14.dp, vertical = 8.dp)
-                                ) {
-                                    Text(
-                                        text = display,
-                                        style = TextStyle(
-                                            fontSize = (14 * scale).sp,
-                                            color = parseHex(fg),
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    )
-                                }
-                            }
+                            val bg = parts[0].trim(); val fg = parts[1].trim()
+                            val display: String; val scale: Double
+                            if (parts.size >= 4) { scale = parts[2].trim().toDoubleOrNull() ?: 2.0; display = parts[3].trim() } else { scale = 2.0; display = parts[2].trim() }
+                            i = bs + inner.length + 2
+                            flushSpans(spans, widgets, txtColor, textAlign)
+                            widgets.add { Box(modifier = Modifier.padding(vertical = 4.dp).background(parseHex(bg), RoundedCornerShape(10.dp)).padding(horizontal = 14.dp, vertical = 8.dp)) { Text(text = display, style = TextStyle(fontSize = (14 * scale).sp, color = parseHex(fg), fontWeight = FontWeight.Bold)) } }
                             continue
                         }
                     }
@@ -321,25 +166,17 @@ object MessageContentBuilder {
 
             // \colorbox{#hex}{content}
             if (i + 10 < text.length && text.substring(i, i + 10) == "\\colorbox{") {
-                val hexEnd = text.indexOf('}', i + 10)
-                if (hexEnd > i + 10) {
-                    val bgHex = text.substring(i + 10, hexEnd)
-                    val outerBrace = text.indexOf('{', hexEnd + 1)
-                    if (outerBrace >= 0) {
-                        val outer = braceAt(text, outerBrace)
+                val he = text.indexOf('}', i + 10)
+                if (he > i + 10) {
+                    val bgHex = text.substring(i + 10, he)
+                    val ob = text.indexOf('{', he + 1)
+                    if (ob >= 0) {
+                        val outer = braceAt(text, ob)
                         if (outer != null) {
-                            var display = outer
-                            val lastBrace = outer.lastIndexOf('{')
-                            if (lastBrace >= 0) {
-                                val inner = braceAt(outer, lastBrace)
-                                if (inner != null) display = inner
-                            }
-                            i = outerBrace + outer.length + 2
-                            spans.add {
-                                withAnnotation("colorbox", bgHex) {
-                                    append(display)
-                                }
-                            }
+                            var display = outer; val lb = outer.lastIndexOf('{')
+                            if (lb >= 0) { val inn = braceAt(outer, lb); if (inn != null) display = inn }
+                            i = ob + outer.length + 2
+                            spans.add { withAnnotation("colorbox", bgHex) { append(display) } }
                             continue
                         }
                     }
@@ -348,17 +185,13 @@ object MessageContentBuilder {
 
             // \textcolor{#hex}{text}
             if (i + 11 < text.length && text.substring(i, i + 11) == "\\textcolor{") {
-                val hexEnd = text.indexOf('}', i + 11)
-                if (hexEnd > i + 11) {
-                    val fgHex = text.substring(i + 11, hexEnd)
-                    val content = braceAt(text, hexEnd + 1)
+                val he = text.indexOf('}', i + 11)
+                if (he > i + 11) {
+                    val fgHex = text.substring(i + 11, he)
+                    val content = braceAt(text, he + 1)
                     if (content != null) {
-                        i = hexEnd + 1 + content.length + 2
-                        spans.add {
-                            withStyle(SpanStyle(color = parseHex(fgHex))) {
-                                append(content)
-                            }
-                        }
+                        i = he + 1 + content.length + 2
+                        spans.add { withStyle(SpanStyle(color = parseHex(fgHex))) { append(content) } }
                         continue
                     }
                 }
@@ -366,68 +199,33 @@ object MessageContentBuilder {
 
             // \Huge text
             if (i + 5 <= text.length && text.substring(i, i + 5) == "\\Huge") {
-                var j = i + 5
-                if (j < text.length && text[j] == ' ') j++
-                val nextB = text.indexOf('\\', j)
-                val hugeText = if (nextB >= 0) text.substring(j, nextB).trim() else text.substring(j).trim()
-                i = if (nextB >= 0) nextB else text.length
+                var j = i + 5; if (j < text.length && text[j] == ' ') j++
+                val nb = text.indexOf('\\', j)
+                val hugeText = if (nb >= 0) text.substring(j, nb).trim() else text.substring(j).trim()
+                i = if (nb >= 0) nb else text.length
                 if (hugeText.isNotEmpty()) {
-                    // 先输出已有 spans
-                    if (spans.isNotEmpty()) {
-                        val builder = AnnotatedString.Builder()
-                        spans.forEach { it(builder) }
-                        widgets.add {
-                            Text(
-                                text = builder.toAnnotatedString(),
-                                style = TextStyle(fontSize = 14.sp, color = txtColor, lineHeight = 19.6.sp),
-                                textAlign = textAlign
-                            )
-                        }
-                        spans.clear()
-                    }
-                    widgets.add {
-                        Text(
-                            text = hugeText,
-                            style = TextStyle(
-                                fontSize = 24.sp,
-                                color = txtColor,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 33.6.sp
-                            )
-                        )
-                    }
+                    flushSpans(spans, widgets, txtColor, textAlign)
+                    widgets.add { Text(text = hugeText, style = TextStyle(fontSize = 24.sp, color = txtColor, fontWeight = FontWeight.Bold, lineHeight = 33.6.sp)) }
                 }
                 continue
             }
 
             // 普通文字
-            val nextCmd = text.indexOf('\\', i + 1)
-            if (nextCmd > i) {
-                spans.add { append(text.substring(i, nextCmd)) }
-                i = nextCmd
-            } else if (nextCmd == i) {
-                i++
-            } else {
-                spans.add { append(text.substring(i)) }
-                break
-            }
+            val nc = text.indexOf('\\', i + 1)
+            if (nc > i) { spans.add { append(text.substring(i, nc)) }; i = nc }
+            else if (nc == i) { i++ }
+            else { spans.add { append(text.substring(i)) }; break }
         }
 
-        // 输出剩余 spans
+        flushSpans(spans, widgets, txtColor, textAlign)
+        Column { widgets.forEach { it() } }
+    }
+
+    private fun flushSpans(spans: MutableList<AnnotatedString.Builder.() -> Unit>, widgets: MutableList<@Composable () -> Unit>, txtColor: Color, textAlign: TextAlign) {
         if (spans.isNotEmpty()) {
-            val builder = AnnotatedString.Builder()
-            spans.forEach { it(builder) }
-            widgets.add {
-                Text(
-                    text = builder.toAnnotatedString(),
-                    style = TextStyle(fontSize = 14.sp, color = txtColor, lineHeight = 19.6.sp),
-                    textAlign = textAlign
-                )
-            }
-        }
-
-        Column {
-            widgets.forEach { it() }
+            val builder = AnnotatedString.Builder(); spans.forEach { it(builder) }
+            widgets.add { Text(text = builder.toAnnotatedString(), style = TextStyle(fontSize = 14.sp, color = txtColor, lineHeight = 19.6.sp), textAlign = textAlign) }
+            spans.clear()
         }
     }
 }
