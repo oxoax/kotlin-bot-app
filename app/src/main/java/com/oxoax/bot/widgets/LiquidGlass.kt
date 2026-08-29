@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,10 +22,15 @@ import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 
-/**
- * 液态玻璃效果组件
- * 使用 AndroidLiquidGlass 库实现真正的液态玻璃效果
- */
+val LocalBackdrop = compositionLocalOf<Backdrop?> { null }
+
+@Composable
+fun BackdropProvider(content: @Composable () -> Unit) {
+    val backdrop = rememberCanvasBackdrop { }
+    CompositionLocalProvider(LocalBackdrop provides backdrop) {
+        content()
+    }
+}
 
 @Composable
 fun LiquidGlassBox(
@@ -31,21 +38,25 @@ fun LiquidGlassBox(
     cornerRadius: Dp = 20.dp,
     content: @Composable BoxScope.() -> Unit
 ) {
-    val backdrop = rememberCanvasBackdrop {
-        // 绘制背景内容
-    }
-    
+    val backdrop = LocalBackdrop.current
+    val shape = remember(cornerRadius) { RoundedCornerShape(cornerRadius) }
+
     Box(
         modifier = modifier
-            .drawBackdrop(
-                backdrop = backdrop,
-                shape = { RoundedCornerShape(cornerRadius) },
-                effects = {
-                    vibrancy()
-                    blur(2f.dp.toPx())
-                    lens(12f.dp.toPx(), 24f.dp.toPx())
-                }
+            .then(
+                if (backdrop != null) {
+                    Modifier.drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { shape },
+                        effects = {
+                            vibrancy()
+                            blur(2f.dp.toPx())
+                            lens(12f.dp.toPx(), 24f.dp.toPx())
+                        }
+                    )
+                } else Modifier
             )
+            .clip(shape)
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -62,7 +73,7 @@ fun LiquidGlassBox(
                         Color.White.copy(alpha = 0.2f)
                     )
                 ),
-                shape = RoundedCornerShape(cornerRadius)
+                shape = shape
             )
     ) {
         content()
@@ -75,21 +86,25 @@ fun LiquidGlassCard(
     cornerRadius: Dp = 16.dp,
     content: @Composable BoxScope.() -> Unit
 ) {
-    val backdrop = rememberCanvasBackdrop {
-        // 绘制背景内容
-    }
-    
+    val backdrop = LocalBackdrop.current
+    val shape = remember(cornerRadius) { RoundedCornerShape(cornerRadius) }
+
     Box(
         modifier = modifier
-            .drawBackdrop(
-                backdrop = backdrop,
-                shape = { RoundedCornerShape(cornerRadius) },
-                effects = {
-                    vibrancy()
-                    blur(2f.dp.toPx())
-                    lens(12f.dp.toPx(), 24f.dp.toPx())
-                }
+            .then(
+                if (backdrop != null) {
+                    Modifier.drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { shape },
+                        effects = {
+                            vibrancy()
+                            blur(2f.dp.toPx())
+                            lens(12f.dp.toPx(), 24f.dp.toPx())
+                        }
+                    )
+                } else Modifier
             )
+            .clip(shape)
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -106,7 +121,7 @@ fun LiquidGlassCard(
                         Color.White.copy(alpha = 0.15f)
                     )
                 ),
-                shape = RoundedCornerShape(cornerRadius)
+                shape = shape
             )
     ) {
         content()
@@ -118,21 +133,24 @@ fun LiquidGlassCircle(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
-    val backdrop = rememberCanvasBackdrop {
-        // 绘制背景内容
-    }
-    
+    val backdrop = LocalBackdrop.current
+
     Box(
         modifier = modifier
-            .drawBackdrop(
-                backdrop = backdrop,
-                shape = { CircleShape },
-                effects = {
-                    vibrancy()
-                    blur(2f.dp.toPx())
-                    lens(12f.dp.toPx(), 24f.dp.toPx())
-                }
+            .then(
+                if (backdrop != null) {
+                    Modifier.drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { CircleShape },
+                        effects = {
+                            vibrancy()
+                            blur(2f.dp.toPx())
+                            lens(12f.dp.toPx(), 24f.dp.toPx())
+                        }
+                    )
+                } else Modifier
             )
+            .clip(CircleShape)
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -161,21 +179,25 @@ fun LiquidGlassCapsule(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
-    val backdrop = rememberCanvasBackdrop {
-        // 绘制背景内容
-    }
-    
+    val backdrop = LocalBackdrop.current
+    val shape = remember { RoundedCornerShape(50) }
+
     Box(
         modifier = modifier
-            .drawBackdrop(
-                backdrop = backdrop,
-                shape = { RoundedCornerShape(50) },
-                effects = {
-                    vibrancy()
-                    blur(2f.dp.toPx())
-                    lens(12f.dp.toPx(), 24f.dp.toPx())
-                }
+            .then(
+                if (backdrop != null) {
+                    Modifier.drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { shape },
+                        effects = {
+                            vibrancy()
+                            blur(2f.dp.toPx())
+                            lens(12f.dp.toPx(), 24f.dp.toPx())
+                        }
+                    )
+                } else Modifier
             )
+            .clip(shape)
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -192,7 +214,7 @@ fun LiquidGlassCapsule(
                         Color.White.copy(alpha = 0.15f)
                     )
                 ),
-                shape = RoundedCornerShape(50)
+                shape = shape
             )
     ) {
         content()
