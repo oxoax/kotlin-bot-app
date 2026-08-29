@@ -66,4 +66,7 @@ dependencies {
 
     // Coil (图片加载)
     implementation("io.coil-kt:coil-compose:2.5.0")
+
+    // AndroidLiquidGlass (液态玻璃效果)
+    implementation("io.github.kyant0:backdrop:1.0.0")
 }
