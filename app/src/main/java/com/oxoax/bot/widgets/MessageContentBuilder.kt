@@ -105,34 +105,9 @@ object MessageContentBuilder {
                     val cp = text.indexOf(')', cb + 2)
                     if (cp > cb + 2) {
                         val linkText = text.substring(i + 1, cb); i = cp + 1
-                        spans.add { withStyle(SpanStyle(color = Color(0xFF1565C0))) { append(linkText) } }
+                        flushSpans(spans, widgets, txtColor, textAlign)
+                        widgets.add { Text(text = linkText, style = TextStyle(fontSize = 14.sp, color = Color(0xFF64B5F6), textDecoration = TextDecoration.Underline)) }
                         continue
-                    }
-                }
-            }
-
-            // \gradient{#hex1}{#hex2}{text}
-            if (i + 9 < text.length && text.substring(i, i + 9) == "\\gradient") {
-                val b1 = text.indexOf('{', i + 9)
-                if (b1 >= 0) {
-                    val h1 = braceAt(text, b1)
-                    if (h1 != null) {
-                        val b2 = text.indexOf('{', b1 + h1.length + 2)
-                        if (b2 >= 0) {
-                            val h2 = braceAt(text, b2)
-                            if (h2 != null) {
-                                val b3 = text.indexOf('{', b2 + h2.length + 2)
-                                if (b3 >= 0) {
-                                    val content = braceAt(text, b3)
-                                    if (content != null) {
-                                        i = b3 + content.length + 2
-                                        flushSpans(spans, widgets, txtColor, textAlign)
-                                        widgets.add { Text(text = content, style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, brush = Brush.horizontalGradient(listOf(parseHex(h1), parseHex(h2))), lineHeight = 19.6.sp)) }
-                                        continue
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
             }
