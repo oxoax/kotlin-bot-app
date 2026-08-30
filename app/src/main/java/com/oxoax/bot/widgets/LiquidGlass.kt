@@ -1,7 +1,5 @@
 package com.oxoax.bot.widgets
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,12 +8,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
@@ -23,7 +18,7 @@ import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 
-val LocalBackdrop = compositionLocalOf<Backdrop> { error("No Backdrop provided") }
+val LocalBackdrop = compositionLocalOf<LayerBackdrop> { error("No Backdrop provided") }
 
 @Composable
 fun BackdropProvider(content: @Composable () -> Unit) {
@@ -36,7 +31,7 @@ fun BackdropProvider(content: @Composable () -> Unit) {
 /**
  * 在背景图上使用此 Modifier，捕获背景内容供液态玻璃折射
  */
-fun Modifier.captureBackdrop(backdrop: Backdrop): Modifier {
+fun Modifier.captureBackdrop(backdrop: LayerBackdrop): Modifier {
     return this.layerBackdrop(backdrop)
 }
 
