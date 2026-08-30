@@ -16,20 +16,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.Backdrop
-import com.kyant.backdrop.backdrops.rememberCanvasBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 
-val LocalBackdrop = compositionLocalOf<Backdrop?> { null }
+val LocalBackdrop = compositionLocalOf<Backdrop> { error("No Backdrop provided") }
 
 @Composable
 fun BackdropProvider(content: @Composable () -> Unit) {
-    val backdrop = rememberCanvasBackdrop { }
+    val backdrop = rememberLayerBackdrop()
     CompositionLocalProvider(LocalBackdrop provides backdrop) {
         content()
     }
+}
+
+/**
+ * 在背景图上使用此 Modifier，捕获背景内容供液态玻璃折射
+ */
+fun Modifier.captureBackdrop(backdrop: Backdrop): Modifier {
+    return this.layerBackdrop(backdrop)
 }
 
 @Composable
@@ -43,41 +51,17 @@ fun LiquidGlassBox(
 
     Box(
         modifier = modifier
-            .then(
-                if (backdrop != null) {
-                    Modifier.drawBackdrop(
-                        backdrop = backdrop,
-                        shape = { shape },
-                        effects = {
-                            vibrancy()
-                            blur(2f.dp.toPx())
-                            lens(12f.dp.toPx(), 24f.dp.toPx())
-                        }
-                    )
-                } else Modifier
-            )
-            .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.25f),
-                        Color.White.copy(alpha = 0.10f)
-                    )
-                )
-            )
-            .border(
-                width = 0.5.dp,
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.6f),
-                        Color.White.copy(alpha = 0.2f)
-                    )
-                ),
-                shape = shape
-            )
-    ) {
-        content()
-    }
+            .drawBackdrop(
+                backdrop = backdrop,
+                shape = { shape },
+                effects = {
+                    vibrancy()
+                    blur(2f.dp.toPx())
+                    lens(12f.dp.toPx(), 24f.dp.toPx())
+                }
+            ),
+        content = content
+    )
 }
 
 @Composable
@@ -91,41 +75,17 @@ fun LiquidGlassCard(
 
     Box(
         modifier = modifier
-            .then(
-                if (backdrop != null) {
-                    Modifier.drawBackdrop(
-                        backdrop = backdrop,
-                        shape = { shape },
-                        effects = {
-                            vibrancy()
-                            blur(2f.dp.toPx())
-                            lens(12f.dp.toPx(), 24f.dp.toPx())
-                        }
-                    )
-                } else Modifier
-            )
-            .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.20f),
-                        Color.White.copy(alpha = 0.08f)
-                    )
-                )
-            )
-            .border(
-                width = 0.5.dp,
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.5f),
-                        Color.White.copy(alpha = 0.15f)
-                    )
-                ),
-                shape = shape
-            )
-    ) {
-        content()
-    }
+            .drawBackdrop(
+                backdrop = backdrop,
+                shape = { shape },
+                effects = {
+                    vibrancy()
+                    blur(2f.dp.toPx())
+                    lens(12f.dp.toPx(), 24f.dp.toPx())
+                }
+            ),
+        content = content
+    )
 }
 
 @Composable
@@ -137,41 +97,17 @@ fun LiquidGlassCircle(
 
     Box(
         modifier = modifier
-            .then(
-                if (backdrop != null) {
-                    Modifier.drawBackdrop(
-                        backdrop = backdrop,
-                        shape = { CircleShape },
-                        effects = {
-                            vibrancy()
-                            blur(2f.dp.toPx())
-                            lens(12f.dp.toPx(), 24f.dp.toPx())
-                        }
-                    )
-                } else Modifier
-            )
-            .clip(CircleShape)
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.25f),
-                        Color.White.copy(alpha = 0.10f)
-                    )
-                )
-            )
-            .border(
-                width = 0.5.dp,
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.6f),
-                        Color.White.copy(alpha = 0.2f)
-                    )
-                ),
-                shape = CircleShape
-            )
-    ) {
-        content()
-    }
+            .drawBackdrop(
+                backdrop = backdrop,
+                shape = { CircleShape },
+                effects = {
+                    vibrancy()
+                    blur(2f.dp.toPx())
+                    lens(12f.dp.toPx(), 24f.dp.toPx())
+                }
+            ),
+        content = content
+    )
 }
 
 @Composable
@@ -184,39 +120,15 @@ fun LiquidGlassCapsule(
 
     Box(
         modifier = modifier
-            .then(
-                if (backdrop != null) {
-                    Modifier.drawBackdrop(
-                        backdrop = backdrop,
-                        shape = { shape },
-                        effects = {
-                            vibrancy()
-                            blur(2f.dp.toPx())
-                            lens(12f.dp.toPx(), 24f.dp.toPx())
-                        }
-                    )
-                } else Modifier
-            )
-            .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.22f),
-                        Color.White.copy(alpha = 0.08f)
-                    )
-                )
-            )
-            .border(
-                width = 0.5.dp,
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.5f),
-                        Color.White.copy(alpha = 0.15f)
-                    )
-                ),
-                shape = shape
-            )
-    ) {
-        content()
-    }
+            .drawBackdrop(
+                backdrop = backdrop,
+                shape = { shape },
+                effects = {
+                    vibrancy()
+                    blur(2f.dp.toPx())
+                    lens(12f.dp.toPx(), 24f.dp.toPx())
+                }
+            ),
+        content = content
+    )
 }

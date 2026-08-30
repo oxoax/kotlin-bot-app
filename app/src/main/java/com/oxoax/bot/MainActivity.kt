@@ -1,5 +1,7 @@
 package com.oxoax.bot
 import com.oxoax.bot.widgets.BackdropProvider
+import com.oxoax.bot.widgets.LocalBackdrop
+import com.oxoax.bot.widgets.captureBackdrop
 
 import android.os.Bundle
 import android.util.Log
@@ -77,6 +79,7 @@ fun LoginPage(onDone: () -> Unit) {
     var saving by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    val backdrop = LocalBackdrop.current
     Box(modifier = Modifier.fillMaxSize()) {
         // 背景图
         AsyncImage(
@@ -85,7 +88,7 @@ fun LoginPage(onDone: () -> Unit) {
                 .crossfade(true)
                 .build(),
             contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().captureBackdrop(backdrop),
             contentScale = ContentScale.Crop
         )
 
@@ -290,11 +293,12 @@ fun MainPage() {
         }
     }
 
+    val backdrop = LocalBackdrop.current
     // 背景
     Box(modifier = Modifier.fillMaxSize()) {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current).data("https://www.loliapi.com/acg/pe/").crossfade(true).build(),
-            contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop
+            contentDescription = null, modifier = Modifier.fillMaxSize().captureBackdrop(backdrop), contentScale = ContentScale.Crop
         )
         Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)))
 
